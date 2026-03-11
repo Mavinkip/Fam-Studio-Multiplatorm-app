@@ -1,14 +1,11 @@
 rootProject.name = "FAM"
 
-include(":composeApp")
-include(":shared")
-
 pluginManagement {
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")  // Add this line
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
 
@@ -17,5 +14,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        maven("https://androidx.dev/storage/compose-compiler/repository/")
     }
 }
+
+include(":composeApp")
+include(":shared")
