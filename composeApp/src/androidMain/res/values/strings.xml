@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FAM Studio</string>
+
+    <string name="webclientid">903052396680-kc6rjihiql6girinsr6ug7uo7a67bqsk.apps.googleusercontent.com</string>
 </resources>

@@ -6,21 +6,17 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.googleServices)           // ← Firebase
 }
 
 kotlin {
     androidTarget {
         compilerOptions { jvmTarget = JvmTarget.JVM_17 }
     }
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    iosX64(); iosArm64(); iosSimulatorArm64()
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
+    wasmJs { browser(); binaries.executable() }
 
     sourceSets {
         commonMain.dependencies {
@@ -52,17 +48,11 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.famstudio.app"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        minSdk = 24; targetSdk = 36
+        versionCode = 1; versionName = "1.0.0"
     }
-    packaging {
-        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
-    }
-    buildTypes {
-        getByName("release") { isMinifyEnabled = false }
-    }
+    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    buildTypes { getByName("release") { isMinifyEnabled = false } }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

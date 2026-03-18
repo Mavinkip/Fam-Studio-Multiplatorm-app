@@ -10,5 +10,3 @@ import androidx.compose.runtime.Composable
  *
  * Usage: call SecureScreenEffect() at the top of any screen that shows unpurchased art.
  */
-@Composable
-expect fun SecureScreenEffect()

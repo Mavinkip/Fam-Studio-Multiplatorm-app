@@ -13,15 +13,10 @@ kotlin {
     androidTarget {
         compilerOptions { jvmTarget = JvmTarget.JVM_17 }
     }
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    iosX64(); iosArm64(); iosSimulatorArm64()
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
+    wasmJs { browser(); binaries.executable() }
 
     sourceSets {
         commonMain.dependencies {
@@ -36,10 +31,14 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.json)
             implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
             implementation(libs.lifecycle.viewmodel)
             implementation(libs.compose.navigation)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            implementation(libs.firebase.auth)
+            implementation(libs.firebase.firestore)
         }
         androidMain.dependencies {
             implementation(libs.datastore.preferences)
@@ -47,6 +46,10 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.compose.uiTooling)
             implementation(libs.koin.android)
+            // Credential Manager for Google Sign-In (Android only)
+            implementation(libs.credential.manager)
+            implementation(libs.credential.manager.play)
+            implementation(libs.google.id)
         }
         iosMain.dependencies {
             implementation(libs.datastore.preferences)

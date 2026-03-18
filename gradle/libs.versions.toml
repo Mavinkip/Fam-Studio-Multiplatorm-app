@@ -19,6 +19,10 @@ koin = "4.0.0"
 datastore = "1.1.0"
 androidx-navigation = "2.8.0-alpha08"
 coil = "3.0.0"
+firebase = "2.1.0"
+googleServices = "4.4.2"
+credentialManager = "1.3.0"
+googleId = "1.1.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -55,6 +59,12 @@ datastore-preferences = { module = "androidx.datastore:datastore-preferences-cor
 compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebase" }
+firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "firebase" }
+# Google Sign-In — Android only (Credential Manager)
+credential-manager = { module = "androidx.credentials:credentials", version.ref = "credentialManager" }
+credential-manager-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialManager" }
+google-id = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -63,3 +73,4 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

@@ -2,8 +2,12 @@ package com.famstudio.app.domain.model
 
 import kotlinx.serialization.Serializable
 
-enum class UserRole { CLIENT, ARTIST, ADMIN }
 
+enum class UserRole {
+    CLIENT,
+    ARTIST,
+    ADMIN
+}
 @Serializable
 data class User(
     val id: String = "",
