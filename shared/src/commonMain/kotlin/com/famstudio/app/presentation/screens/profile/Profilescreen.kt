@@ -2,6 +2,9 @@ package com.famstudio.app.presentation.screens.profile
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,19 +23,9 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import com.famstudio.app.presentation.navigation.Screen
 import com.famstudio.app.presentation.screens.cart.CartState
+import com.famstudio.app.presentation.screens.cart.OrderDetailCard
 import com.famstudio.app.presentation.theme.FamColors
 
-data class OrderRecord(
-    val id: String, val artTitle: String, val artistName: String,
-    val imageUrl: String, val style: String, val size: String, val status: String
-)
-
-private val FAKE_ORDERS = listOf(
-    OrderRecord("o1", "Whispers of Dawn", "Amara Osei",
-        "https://picsum.photos/seed/art1/400/560", "Oil Painting", "50×70 cm", "In Progress"),
-    OrderRecord("o2", "Urban Pulse", "Nia Kamara",
-        "https://picsum.photos/seed/art3/400/500", "Acrylic", "45×55 cm", "Pending"),
-)
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
@@ -41,6 +34,7 @@ fun ProfileScreen(navController: NavHostController) {
     val tabs = listOf("Profile", "Orders", "Cart")
 
     Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Column(modifier = Modifier.fillMaxWidth().background(colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -74,7 +68,7 @@ fun ProfileScreen(navController: NavHostController) {
         TabRow(selectedTabIndex = selectedTab,
             containerColor = colorScheme.background,
             contentColor   = FamColors.PinterestRed,
-            indicator      = { tabPositions ->
+            indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     color    = FamColors.PinterestRed)
@@ -92,8 +86,8 @@ fun ProfileScreen(navController: NavHostController) {
 
         when (selectedTab) {
             0 -> ProfileTab(colorScheme)
-            1 -> OrdersTab(colorScheme)
-            2 -> CartTab(navController, colorScheme)
+            1 -> ProfileOrdersTab(colorScheme)
+            2 -> ProfileCartTab(navController, colorScheme)
         }
     }
 }
@@ -121,58 +115,31 @@ private fun ProfileTab(colorScheme: ColorScheme) {
     }
 }
 
+// Uses real CartState.orders — same data as Cart screen Orders tab
 @Composable
-private fun OrdersTab(colorScheme: ColorScheme) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (FAKE_ORDERS.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No orders yet", color = colorScheme.onBackground.copy(0.5f))
-            }
-        } else {
-            FAKE_ORDERS.forEach { order -> OrderCard(order, colorScheme) }
-        }
-    }
-}
-
-@Composable
-private fun OrderCard(order: OrderRecord, colorScheme: ColorScheme) {
-    Card(shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        border = BorderStroke(0.5.dp, colorScheme.outlineVariant)) {
-        Row(modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(order.imageUrl).build(),
-                contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(10.dp))
-                    .background(FamColors.SurfaceVariant)
-            )
-            Column(modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(order.artTitle, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+private fun ProfileOrdersTab(colorScheme: ColorScheme) {
+    val orders = CartState.orders
+    if (orders.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("🎨", fontSize = 40.sp)
+                Text("No orders yet", fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onBackground)
-                Text(order.artistName, fontSize = 13.sp,
-                    color = colorScheme.onBackground.copy(0.6f))
-                Text("${order.style} · ${order.size}", fontSize = 12.sp,
-                    color = colorScheme.onBackground.copy(0.5f))
-                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                    .background(when(order.status) {
-                        "Complete"    -> Color(0xFF2E7D32)
-                        "In Progress" -> Color(0xFFE65100)
-                        else          -> colorScheme.outlineVariant
-                    }).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                    Text(order.status, fontSize = 11.sp, color = Color.White,
-                        fontWeight = FontWeight.SemiBold)
-                }
+                Text("Order a custom artwork from an artist",
+                    fontSize = 13.sp, color = colorScheme.onBackground.copy(0.5f))
             }
+        }
+    } else {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            orders.forEach { order -> OrderDetailCard(order, colorScheme) }
         }
     }
 }
 
 @Composable
-private fun CartTab(navController: NavHostController, colorScheme: ColorScheme) {
+private fun ProfileCartTab(navController: NavHostController, colorScheme: ColorScheme) {
     val items = CartState.items
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

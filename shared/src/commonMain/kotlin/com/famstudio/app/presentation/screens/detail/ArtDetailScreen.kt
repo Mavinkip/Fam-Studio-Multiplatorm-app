@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -11,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -81,83 +85,113 @@ fun ArtDetailScreen(artworkId: String, navController: NavHostController) {
     val colorScheme = MaterialTheme.colorScheme
     var showDetails by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)
-        .verticalScroll(scrollState)) {
-
-        // ── Image ─────────────────────────────────────────────────────
-        Box(modifier = Modifier.fillMaxWidth()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(artwork.imageUrl).build(),
-                contentDescription = artwork.title,
-                contentScale       = ContentScale.FillWidth,
-                modifier           = Modifier.fillMaxWidth()
-            )
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp)
-                .background(Brush.verticalGradient(
-                    listOf(Color.Black.copy(0.45f), Color.Transparent))))
-            Box(modifier = Modifier.padding(16.dp).size(40.dp).clip(CircleShape)
-                .background(Color.Black.copy(0.35f))
-                .clickable { navController.popBackStack() }
-                .align(Alignment.TopStart),
-                contentAlignment = Alignment.Center) {
-                Text("←", color = Color.White, fontSize = 20.sp)
+    // Scroll-aware back button — shows when scrolling up, hides scrolling down
+    var lastScroll     by remember { mutableIntStateOf(0) }
+    var backBtnVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect { current ->
+            val delta = current - lastScroll
+            when {
+                delta > 30  -> backBtnVisible = false   // scrolling down → hide
+                delta < -30 -> backBtnVisible = true    // scrolling up   → show
             }
+            lastScroll = current
         }
+    }
+    val backAlpha by animateFloatAsState(
+        targetValue   = if (backBtnVisible) 1f else 0f,
+        animationSpec = tween(250),
+        label         = "backBtn"
+    )
 
-        // ── Artist row + Details button ───────────────────────────────
-        Row(modifier = Modifier.fillMaxWidth().background(colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
+    Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
 
-            // ← Artist row is now CLICKABLE → goes to ArtistProfile
-            Row(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                .clickable {
-                    navController.navigate(Screen.ArtistProfile.createRoute(artwork.artistId))
-                }.padding(end = 8.dp),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // ── Image ─────────────────────────────────────────────────────
+            Box(modifier = Modifier.fillMaxWidth()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data(artwork.artistAvatar).build(),
-                    contentDescription = artwork.artistName,
-                    contentScale       = ContentScale.Crop,
-                    modifier           = Modifier.size(42.dp).clip(CircleShape)
-                        .background(FamColors.SurfaceVariant)
+                        .data(artwork.imageUrl).build(),
+                    contentDescription = artwork.title,
+                    contentScale       = ContentScale.FillWidth,
+                    modifier           = Modifier.fillMaxWidth()
                 )
-                Column {
-                    Text("Artist", fontSize = 11.sp,
-                        color = colorScheme.onBackground.copy(alpha = 0.45f))
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(artwork.artistName, fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
-                        Text("→", fontSize = 13.sp,
-                            color = colorScheme.onBackground.copy(0.4f))
+                Box(modifier = Modifier.fillMaxWidth().height(100.dp)
+                    .background(Brush.verticalGradient(
+                        listOf(Color.Black.copy(0.45f), Color.Transparent))))
+            }
+
+            // ── Artist row + Details button ───────────────────────────────
+            Row(modifier = Modifier.fillMaxWidth().background(colorScheme.background)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+
+                // ← Artist row is now CLICKABLE → goes to ArtistProfile
+                Row(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        navController.navigate(Screen.ArtistProfile.createRoute(artwork.artistId))
+                    }.padding(end = 8.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalPlatformContext.current)
+                            .data(artwork.artistAvatar).build(),
+                        contentDescription = artwork.artistName,
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.size(42.dp).clip(CircleShape)
+                            .background(FamColors.SurfaceVariant)
+                    )
+                    Column {
+                        Text("Artist", fontSize = 11.sp,
+                            color = colorScheme.onBackground.copy(alpha = 0.45f))
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(artwork.artistName, fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
+                            Text("→", fontSize = 13.sp,
+                                color = colorScheme.onBackground.copy(0.4f))
+                        }
                     }
+                }
+
+                OutlinedButton(onClick = { showDetails = true },
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.5.dp, FamColors.PinterestRed),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text("Details", color = FamColors.PinterestRed,
+                        fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 }
             }
 
-            OutlinedButton(onClick = { showDetails = true },
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.5.dp, FamColors.PinterestRed),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
-                Text("Details", color = FamColors.PinterestRed,
-                    fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            }
+            HorizontalDivider(color = colorScheme.outlineVariant, thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 16.dp))
+
+            Text("More to explore", fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                color = colorScheme.onBackground,
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 10.dp))
+
+            MasonryGrid(items = MORE_FEED, navController = navController)
+            Spacer(Modifier.height(32.dp))
+        } // end Column (verticalScroll)
+
+        // ── Floating back button — Pinterest style ─────────────────────
+        // Shows on scroll up, hides on scroll down
+        Box(
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(start = 16.dp, top = 8.dp)
+                .size(40.dp)
+                .alpha(backAlpha)
+                .clip(CircleShape)
+                .background(Color.Black.copy(0.45f))
+                .clickable(enabled = backBtnVisible) { navController.popBackStack() }
+                .align(Alignment.TopStart),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("‹", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Light)
         }
-
-        HorizontalDivider(color = colorScheme.outlineVariant, thickness = 0.5.dp,
-            modifier = Modifier.padding(horizontal = 16.dp))
-
-        Text("More to explore", fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            color = colorScheme.onBackground,
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 10.dp))
-
-        MasonryGrid(items = MORE_FEED, navController = navController)
-        Spacer(Modifier.height(32.dp))
-    }
+    } // end outer Box
 
     if (showDetails) {
         DetailsSheet(artwork = artwork, onDismiss = { showDetails = false },
@@ -262,8 +296,8 @@ private fun DetailsSheet(
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(onClick = {
-                        onDismiss()
                         navController.navigate(Screen.OrderFlow.createRoute(artwork.id))
+                        onDismiss()
                     }, modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.5.dp, FamColors.PinterestRed)) {
@@ -272,6 +306,7 @@ private fun DetailsSheet(
                     }
 
                     Button(onClick = {
+                        // Add to cart (so it's there if user cancels checkout)
                         CartState.addToCart(CartItem(
                             id = artwork.id, title = artwork.title,
                             artistName = artwork.artistName, artistId = artwork.artistId,
@@ -280,11 +315,10 @@ private fun DetailsSheet(
                         ))
                         addedToCart = true
                         onDismiss()
-                        // ← Fix: navigate to Cart WITHOUT replacing Home in back stack
-                        navController.navigate(Screen.Cart.route) {
-                            launchSingleTop = true
-                            // Do NOT popUpTo Home — keep back stack intact
-                        }
+                        // Go directly to BuyNow checkout
+                        navController.navigate(
+                            Screen.CheckoutBuyNow.createRoute(artwork.title, artwork.priceRaw)
+                        )
                     }, modifier = Modifier.weight(1f).height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(

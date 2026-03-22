@@ -2,6 +2,9 @@ package com.famstudio.app.presentation.screens.order
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,7 +23,11 @@ import coil3.request.ImageRequest
 import com.famstudio.app.presentation.navigation.Screen
 import com.famstudio.app.presentation.screens.cart.CartState
 import com.famstudio.app.presentation.screens.cart.OrderItem
+import com.famstudio.app.presentation.screens.order.ArtistInfo
+import com.famstudio.app.presentation.screens.order.FAKE_ARTISTS_PUBLIC
 import com.famstudio.app.presentation.theme.FamColors
+
+
 
 
 private val ART_STYLES = listOf(
@@ -50,6 +57,7 @@ fun OrderFlowScreen(artworkId: String, navController: NavHostController) {
     val deposit        = estimatedTotal / 2
 
     Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         // Header
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -79,7 +87,7 @@ fun OrderFlowScreen(artworkId: String, navController: NavHostController) {
         }
 
         when (step) {
-            1 -> ArtistStep(artist, onNext = { step = 2 })
+            1 -> ArtistStep(artist, navController, onNext = { step = 2 })
             2 -> DetailsStep(
                 selectedStyle, { selectedStyle = it },
                 width, { width = it }, height, { height = it },
@@ -95,11 +103,13 @@ fun OrderFlowScreen(artworkId: String, navController: NavHostController) {
                     val orderId = "ord_${selectedStyle.take(3)}_${(100000..999999).random()}"
                     CartState.addOrder(OrderItem(
                         id           = orderId,
-                        artTitle     = "Custom ${selectedStyle}",
+                        artTitle     = "Custom $selectedStyle",
                         artistName   = artist.name,
+                        artistAvatar = artist.avatar,
                         imageUrl     = artist.avatar,
                         style        = selectedStyle,
                         size         = "$width × $height $unit",
+                        extraDetails = extraDetails,
                         totalPrice   = estimatedTotal,
                         depositPaid  = 0L,
                         status       = "Pending"
@@ -115,11 +125,20 @@ fun OrderFlowScreen(artworkId: String, navController: NavHostController) {
 }
 
 @Composable
-private fun ArtistStep(artist: ArtistInfo, onNext: () -> Unit) {
+private fun ArtistStep(artist: ArtistInfo, navController: NavHostController, onNext: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically,
+
+        // ← Artist row — tappable → goes to full artist profile
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .clickable {
+                navController.navigate(Screen.ArtistProfile.createRoute(artist.id))
+            }
+            .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalPlatformContext.current)
@@ -130,7 +149,14 @@ private fun ArtistStep(artist: ArtistInfo, onNext: () -> Unit) {
             Column {
                 Text(artist.name, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                     color = colorScheme.onBackground)
-                Text(artist.location, fontSize = 13.sp, color = colorScheme.onBackground.copy(0.55f))
+                Text(artist.location, fontSize = 13.sp,
+                    color = colorScheme.onBackground.copy(0.55f))
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("View profile", fontSize = 12.sp,
+                        color = FamColors.PinterestRed)
+                    Text("→", fontSize = 12.sp, color = FamColors.PinterestRed)
+                }
             }
         }
         Text(artist.bio, fontSize = 14.sp, lineHeight = 22.sp,

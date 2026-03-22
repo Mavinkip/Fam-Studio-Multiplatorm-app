@@ -2,6 +2,10 @@ package com.famstudio.app.presentation.screens.cart
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -30,14 +34,20 @@ data class CartItem(
 )
 
 data class OrderItem(
-    val id: String, val artTitle: String, val artistName: String,
-    val imageUrl: String, val style: String, val size: String,
-    val totalPrice: Long, val depositPaid: Long = 0L,
-    val status: String = "Pending",   // Pending | In Progress | Done - Awaiting Confirmation | Complete
-    val currency: String = "KES"
+    val id:           String,
+    val artTitle:     String,
+    val artistName:   String,
+    val artistAvatar: String,
+    val imageUrl:     String,
+    val style:        String,
+    val size:         String,
+    val extraDetails: String  = "",
+    val totalPrice:   Long,
+    val depositPaid:  Long    = 0L,
+    val status:       String  = "Pending",
+    val currency:     String  = "KES"
 )
 
-// ── Global state ──────────────────────────────────────────────────────────
 object CartState {
     val items  = mutableStateListOf<CartItem>()
     val orders = mutableStateListOf<OrderItem>()
@@ -45,7 +55,6 @@ object CartState {
     fun addToCart(item: CartItem) { if (items.none { it.id == item.id }) items.add(item) }
     fun removeFromCart(id: String) { items.removeAll { it.id == id } }
     fun cartTotal(): Long = items.sumOf { it.price }
-
     fun addOrder(order: OrderItem) { if (orders.none { it.id == order.id }) orders.add(order) }
 }
 
@@ -53,11 +62,11 @@ object CartState {
 @Composable
 fun CartScreen(navController: NavHostController) {
     val colorScheme = MaterialTheme.colorScheme
-    var selectedTab  by remember { mutableIntStateOf(0) }
-    var previewItem  by remember { mutableStateOf<CartItem?>(null) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var previewItem by remember { mutableStateOf<CartItem?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
-
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         // Header
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -85,7 +94,10 @@ fun CartScreen(navController: NavHostController) {
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     color    = FamColors.PinterestRed)
             }) {
-            listOf("Cart (${CartState.items.size})", "Orders (${CartState.orders.size})").forEachIndexed { i, title ->
+            listOf(
+                "Cart (${CartState.items.size})",
+                "Orders (${CartState.orders.size})"
+            ).forEachIndexed { i, title ->
                 Tab(selected = selectedTab == i, onClick = { selectedTab = i },
                     text = {
                         Text(title, fontSize = 14.sp,
@@ -96,9 +108,12 @@ fun CartScreen(navController: NavHostController) {
             }
         }
 
-        when (selectedTab) {
-            0 -> CartTab(navController, colorScheme, onPreview = { previewItem = it })
-            1 -> OrdersTab(colorScheme)
+        // Tab content — weight so summary pins to bottom
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                0 -> CartTab(navController, colorScheme, onPreview = { previewItem = it })
+                1 -> OrdersTab(colorScheme)
+            }
         }
     }
 
@@ -113,6 +128,7 @@ private fun CartTab(
     onPreview:     (CartItem) -> Unit
 ) {
     val items = CartState.items
+
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
@@ -141,10 +157,11 @@ private fun CartTab(
                 }
                 Spacer(Modifier.height(8.dp))
             }
-            // Summary
+            // Summary pinned at bottom
             Column(modifier = Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .background(colorScheme.surface).padding(20.dp),
+                .background(colorScheme.surface)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                     Text("Shipping", fontSize = 14.sp, color = colorScheme.onBackground.copy(0.6f))
@@ -156,12 +173,12 @@ private fun CartTab(
                     Text("KES ${CartState.cartTotal()}", fontSize = 18.sp,
                         fontWeight = FontWeight.Bold, color = FamColors.PinterestRed)
                 }
-                Button(
-                    onClick  = { navController.navigate(Screen.Checkout.route) },
+                Button(onClick = { navController.navigate(Screen.Checkout.route) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = FamColors.PinterestRed)
-                ) { Text("Checkout", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                    colors   = ButtonDefaults.buttonColors(containerColor = FamColors.PinterestRed)) {
+                    Text("Checkout", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
     }
@@ -171,6 +188,7 @@ private fun CartTab(
 @Composable
 fun OrdersTab(colorScheme: ColorScheme) {
     val orders = CartState.orders
+
     if (orders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
@@ -178,78 +196,113 @@ fun OrdersTab(colorScheme: ColorScheme) {
                 Text("🎨", fontSize = 48.sp)
                 Text("No custom orders yet", fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
-                Text("Order a custom artwork from an artist", fontSize = 13.sp,
-                    color = colorScheme.onBackground.copy(0.5f))
+                Text("Order a custom artwork from an artist",
+                    fontSize = 13.sp, color = colorScheme.onBackground.copy(0.5f))
             }
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            orders.forEach { order -> OrderCard(order, colorScheme) }
+            orders.forEach { order -> OrderDetailCard(order, colorScheme) }
         }
     }
 }
 
 @Composable
-fun OrderCard(order: OrderItem, colorScheme: ColorScheme) {
+fun OrderDetailCard(order: OrderItem, colorScheme: ColorScheme) {
     val statusColor = when (order.status) {
-        "Complete"                   -> Color(0xFF2E7D32)
-        "In Progress"                -> Color(0xFFE65100)
+        "Complete"                     -> Color(0xFF2E7D32)
+        "In Progress"                  -> Color(0xFFE65100)
         "Done - Awaiting Confirmation" -> Color(0xFF1565C0)
-        else                         -> colorScheme.outlineVariant
+        else                           -> Color(0xFF757575)
     }
+
     Card(shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        border = BorderStroke(0.5.dp, colorScheme.outlineVariant)) {
-        Row(modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(order.imageUrl).build(),
-                contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(10.dp))
-                    .background(FamColors.SurfaceVariant)
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(order.artTitle, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onBackground)
-                Text(order.artistName, fontSize = 13.sp, color = colorScheme.onBackground.copy(0.6f))
-                Text("${order.style} · ${order.size}", fontSize = 12.sp,
-                    color = colorScheme.onBackground.copy(0.5f))
-                Spacer(Modifier.height(4.dp))
-                // Payment progress
-                Row(horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text("Deposit paid", fontSize = 11.sp, color = colorScheme.onBackground.copy(0.45f))
-                        Text("KES ${order.depositPaid}", fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold, color = FamColors.PinterestRed)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Total", fontSize = 11.sp, color = colorScheme.onBackground.copy(0.45f))
-                        Text("KES ${order.totalPrice}", fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
-                    }
+        colors    = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border    = BorderStroke(0.5.dp, colorScheme.outlineVariant)) {
+        Column(modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            // Artist + artwork header
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(order.artistAvatar).build(),
+                    contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
+                        .background(FamColors.SurfaceVariant)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(order.artTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                        color = colorScheme.onBackground)
+                    Text("by ${order.artistName}", fontSize = 13.sp,
+                        color = colorScheme.onBackground.copy(0.6f))
                 }
-                Spacer(Modifier.height(2.dp))
+                // Status badge
                 Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                    .background(statusColor).padding(horizontal = 8.dp, vertical = 3.dp)) {
+                    .background(statusColor).padding(horizontal = 8.dp, vertical = 4.dp)) {
                     Text(order.status, fontSize = 11.sp, color = Color.White,
                         fontWeight = FontWeight.SemiBold)
                 }
-                // Confirm completion button
-                if (order.status == "Done - Awaiting Confirmation") {
-                    Spacer(Modifier.height(4.dp))
-                    Button(onClick = { /* TODO: mark complete, trigger final payment */ },
-                        modifier = Modifier.fillMaxWidth().height(36.dp),
-                        shape    = RoundedCornerShape(10.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))) {
-                        Text("Confirm & Pay Remaining KES ${order.totalPrice - order.depositPaid}",
-                            fontSize = 12.sp, color = Color.White)
-                    }
+            }
+
+            HorizontalDivider(color = colorScheme.outlineVariant)
+
+            // Order details
+            OrderRow("Style",   order.style,    colorScheme)
+            OrderRow("Size",    order.size,     colorScheme)
+            if (order.extraDetails.isNotBlank()) {
+                OrderRow("Details", order.extraDetails, colorScheme)
+            }
+
+            HorizontalDivider(color = colorScheme.outlineVariant)
+
+            // Payment
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                Column {
+                    Text("Deposit paid", fontSize = 11.sp,
+                        color = colorScheme.onBackground.copy(0.45f))
+                    Text("KES ${order.depositPaid}", fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold, color = FamColors.PinterestRed)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Total", fontSize = 11.sp,
+                        color = colorScheme.onBackground.copy(0.45f))
+                    Text("KES ${order.totalPrice}", fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Remaining", fontSize = 11.sp,
+                        color = colorScheme.onBackground.copy(0.45f))
+                    Text("KES ${order.totalPrice - order.depositPaid}", fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onBackground.copy(0.7f))
+                }
+            }
+
+            // Confirm + pay button when artist marks done
+            if (order.status == "Done - Awaiting Confirmation") {
+                Button(onClick = { /* TODO: mark complete + final payment */ },
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape    = RoundedCornerShape(10.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))) {
+                    Text("Confirm & Pay Remaining KES ${order.totalPrice - order.depositPaid}",
+                        fontSize = 13.sp, color = Color.White)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OrderRow(label: String, value: String, colorScheme: ColorScheme) {
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top) {
+        Text(label, fontSize = 13.sp, color = colorScheme.onBackground.copy(0.5f),
+            modifier = Modifier.width(70.dp))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+            color = colorScheme.onBackground, modifier = Modifier.weight(1f))
     }
 }
 
@@ -257,12 +310,12 @@ fun OrderCard(order: OrderItem, colorScheme: ColorScheme) {
 private fun CartItemCard(item: CartItem, onRemove: () -> Unit, onPreview: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Card(shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        colors    = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp),
-        border = BorderStroke(0.5.dp, colorScheme.outlineVariant)) {
+        border    = BorderStroke(0.5.dp, colorScheme.outlineVariant)) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top) {
+            verticalAlignment     = Alignment.Top) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalPlatformContext.current)
                     .data(item.imageUrl).build(),
@@ -281,7 +334,6 @@ private fun CartItemCard(item: CartItem, onRemove: () -> Unit, onPreview: () -> 
                     letterSpacing = 0.5.sp, color = colorScheme.onBackground.copy(0.45f))
                 Text("${item.currency} ${item.price}", fontSize = 16.sp,
                     fontWeight = FontWeight.Bold, color = colorScheme.onBackground)
-                // ← "Order Custom" button REMOVED
             }
             Box(modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp))
                 .background(colorScheme.surfaceVariant).clickable(onClick = onRemove),

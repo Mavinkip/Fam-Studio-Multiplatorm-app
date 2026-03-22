@@ -11,7 +11,6 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -25,10 +24,8 @@ import com.famstudio.app.presentation.navigation.Screen
 import com.famstudio.app.presentation.theme.FamColors
 
 data class ArtCard(
-    val id:          String,
-    val imageUrl:    String,
-    val aspectRatio: Float,
-    val fullWidth:   Boolean = false
+    val id: String, val imageUrl: String, val aspectRatio: Float,
+    val fullWidth: Boolean = false
 )
 
 private val FAKE_FEED = listOf(
@@ -58,50 +55,78 @@ private val FAKE_FEED = listOf(
 )
 
 private val CATEGORIES = listOf(
-    "For You", "Paintings", "Sculpture", "Digital", "Photography", "Illustration", "Mixed Media"
+    "For You", "Paintings", "Sculpture", "Digital",
+    "Photography", "Illustration", "Mixed Media"
 )
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
     var selectedCategory by remember { mutableStateOf("For You") }
-
-    // ── YouTube-style scroll-hide nav bar ─────────────────────────────
     val gridState = rememberLazyStaggeredGridState()
     var lastScrollOffset by remember { mutableIntStateOf(0) }
+    val colorScheme = MaterialTheme.colorScheme
 
+    // YouTube-style scroll hide/show
     LaunchedEffect(gridState) {
         snapshotFlow { gridState.firstVisibleItemScrollOffset to gridState.firstVisibleItemIndex }
             .collect { (offset, index) ->
                 val currentTotal = index * 1000 + offset
                 val delta = currentTotal - lastScrollOffset
                 when {
-                    delta > 20  -> NavBarState.isVisible = false  // scrolling down — hide
-                    delta < -20 -> NavBarState.isVisible = true   // scrolling up — show
+                    delta > 20  -> NavBarState.isVisible = false
+                    delta < -20 -> NavBarState.isVisible = true
                 }
                 lastScrollOffset = currentTotal
             }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        CategoryTabs(
-            categories = CATEGORIES,
-            selected   = selectedCategory,
-            onSelect   = { selectedCategory = it }
-        )
+    Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
 
+        // ── Category tabs — with proper status bar spacing ─────────────
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+
+        ScrollableTabRow(
+            selectedTabIndex = CATEGORIES.indexOf(selectedCategory).coerceAtLeast(0),
+            containerColor   = colorScheme.background,
+            contentColor     = FamColors.PinterestRed,
+            edgePadding      = 8.dp,
+            indicator        = { tabPositions ->
+                val idx = CATEGORIES.indexOf(selectedCategory).coerceAtLeast(0)
+                if (idx < tabPositions.size) {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[idx]),
+                        color    = FamColors.PinterestRed
+                    )
+                }
+            },
+            divider = {}
+        ) {
+            CATEGORIES.forEach { cat ->
+                Tab(
+                    selected = cat == selectedCategory,
+                    onClick  = { selectedCategory = cat },
+                    text = {
+                        Text(
+                            cat,
+                            fontSize   = 14.sp,
+                            fontWeight = if (cat == selectedCategory) FontWeight.Bold
+                            else FontWeight.Normal,
+                            color      = if (cat == selectedCategory) FamColors.PinterestRed
+                            else colorScheme.onBackground.copy(0.55f)
+                        )
+                    }
+                )
+            }
+        }
+        HorizontalDivider(color = colorScheme.outlineVariant, thickness = 0.5.dp)
+
+        // ── Masonry grid ───────────────────────────────────────────────
         LazyVerticalStaggeredGrid(
             state                 = gridState,
             columns               = StaggeredGridCells.Fixed(2),
             modifier              = Modifier.fillMaxSize(),
             contentPadding        = PaddingValues(
-                start  = 6.dp,
-                end    = 6.dp,
-                top    = 6.dp,
-                bottom = 80.dp   // space so last items aren't hidden behind nav bar
+                start = 6.dp, end = 6.dp, top = 6.dp, bottom = 80.dp
             ),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalItemSpacing   = 6.dp
@@ -114,86 +139,34 @@ fun HomeScreen(navController: NavHostController) {
                     else StaggeredGridItemSpan.SingleLane
                 }
             ) { card ->
-                ArtCardItem(
-                    card  = card,
-                    onTap = { navController.navigate(Screen.ArtDetail.createRoute(card.id)) }
-                )
+                ArtCardItem(card = card,
+                    onTap = { navController.navigate(Screen.ArtDetail.createRoute(card.id)) })
             }
         }
     }
-}
-
-@Composable
-private fun CategoryTabs(categories: List<String>, selected: String, onSelect: (String) -> Unit) {
-    ScrollableTabRow(
-        selectedTabIndex = categories.indexOf(selected),
-        containerColor   = Color.White,
-        contentColor     = FamColors.PinterestRed,
-        edgePadding      = 8.dp,
-        indicator        = { tabPositions ->
-            val index = categories.indexOf(selected)
-            if (index in tabPositions.indices) {
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[index]),
-                    color    = FamColors.PinterestRed
-                )
-            }
-        },
-        divider = {}
-    ) {
-        categories.forEach { cat ->
-            Tab(
-                selected = cat == selected,
-                onClick  = { onSelect(cat) },
-                text = {
-                    Text(
-                        cat,
-                        fontSize   = 14.sp,
-                        fontWeight = if (cat == selected) FontWeight.Bold else FontWeight.Normal,
-                        color      = if (cat == selected) FamColors.PinterestRed else FamColors.TextMuted
-                    )
-                }
-            )
-        }
-    }
-    HorizontalDivider(color = FamColors.Border, thickness = 0.5.dp)
 }
 
 @Composable
 private fun ArtCardItem(card: ArtCard, onTap: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue   = if (pressed) 0.97f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label         = "scale"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .clip(RoundedCornerShape(12.dp))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = { pressed = true; tryAwaitRelease(); pressed = false },
-                    onTap   = { onTap() }
-                )
-            }
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(card.aspectRatio)
-                .background(FamColors.SurfaceVariant)
-        )
+        if (pressed) 0.97f else 1f,
+        spring(stiffness = Spring.StiffnessMedium), label = "s")
+    Box(modifier = Modifier.fillMaxWidth().scale(scale)
+        .clip(RoundedCornerShape(12.dp))
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = { pressed = true; tryAwaitRelease(); pressed = false },
+                onTap   = { onTap() }
+            )
+        }) {
+        Box(modifier = Modifier.fillMaxWidth().aspectRatio(card.aspectRatio)
+            .background(FamColors.SurfaceVariant))
         AsyncImage(
-            model              = ImageRequest.Builder(LocalPlatformContext.current)
+            model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(card.imageUrl).build(),
-            contentDescription = null,
-            contentScale       = ContentScale.Fit,
-            modifier           = Modifier
-                .fillMaxWidth()
-                .aspectRatio(card.aspectRatio)
+            contentDescription = null, contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().aspectRatio(card.aspectRatio)
         )
     }
 }

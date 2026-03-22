@@ -13,6 +13,12 @@ sealed class Screen(val route: String) {
     data object CheckoutDeposit   : Screen("checkout_deposit/{orderId}") {
         fun createRoute(id: String) = "checkout_deposit/$id"
     }
+    data object CheckoutBuyNow    : Screen("checkout_buynow/{title}/{price}") {
+        fun createRoute(title: String, price: Long) = "checkout_buynow/$title/$price"
+    }
+    data object CheckoutEvent     : Screen("checkout_event/{eventId}/{tickets}") {
+        fun createRoute(eventId: String, tickets: String) = "checkout_event/$eventId/$tickets"
+    }
     data object ArtDetail         : Screen("art_detail/{artworkId}") {
         fun createRoute(id: String) = "art_detail/$id"
     }
@@ -22,11 +28,11 @@ sealed class Screen(val route: String) {
     data object OrderFlow         : Screen("order_flow/{artworkId}") {
         fun createRoute(id: String) = "order_flow/$id"
     }
+    data object EventDetail       : Screen("event_detail/{eventId}") {
+        fun createRoute(id: String) = "event_detail/$id"
+    }
     data object SavedArt          : Screen("saved_art")
     data object ClientOrders      : Screen("client_orders")
-    data object OrderDetail       : Screen("order_detail/{orderId}") {
-        fun createRoute(id: String) = "order_detail/$id"
-    }
     data object ArtistDashboard   : Screen("artist_dashboard")
     data object MyArtworks        : Screen("my_artworks")
     data object UploadArtwork     : Screen("upload_artwork")

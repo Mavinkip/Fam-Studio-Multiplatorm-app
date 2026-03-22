@@ -37,8 +37,7 @@ kotlin {
             implementation(libs.compose.navigation)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-            implementation(libs.firebase.auth)
-            implementation(libs.firebase.firestore)
+            // Firebase removed from commonMain — wasmJs does not support it
         }
         androidMain.dependencies {
             implementation(libs.datastore.preferences)
@@ -46,17 +45,23 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.compose.uiTooling)
             implementation(libs.koin.android)
-            // Credential Manager for Google Sign-In (Android only)
             implementation(libs.credential.manager)
             implementation(libs.credential.manager.play)
             implementation(libs.google.id)
+            // Firebase — Android only
+            implementation(libs.firebase.auth)
+            implementation(libs.firebase.firestore)
         }
         iosMain.dependencies {
             implementation(libs.datastore.preferences)
             implementation(libs.ktor.client.darwin)
+            // Firebase — iOS only
+            implementation(libs.firebase.auth)
+            implementation(libs.firebase.firestore)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+            // No Firebase for wasmJs — not supported yet
         }
     }
 }
