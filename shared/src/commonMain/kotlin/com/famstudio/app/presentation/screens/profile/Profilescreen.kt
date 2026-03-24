@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
@@ -24,60 +26,87 @@ import coil3.request.ImageRequest
 import com.famstudio.app.presentation.navigation.Screen
 import com.famstudio.app.presentation.screens.cart.CartState
 import com.famstudio.app.presentation.screens.cart.OrderDetailCard
+import com.famstudio.app.presentation.screens.cart.OrderItem
 import com.famstudio.app.presentation.theme.FamColors
 
+// ── Data ─────────────────────────────────────────────────────────────────────
+data class UserProfile(
+    val name:     String = "Jane Client",
+    val email:    String = "jane@example.com",
+    val phone:    String = "+254 700 000 000",
+    val location: String = "Nairobi, Kenya",
+    val role:     String = "Client",
+    val since:    String = "March 2026",
+    val avatar:   String = "https://i.pravatar.cc/150?img=10"
+)
 
+// ── Profile Screen ────────────────────────────────────────────────────────────
 @Composable
 fun ProfileScreen(navController: NavHostController) {
-    val colorScheme = MaterialTheme.colorScheme
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Profile", "Orders", "Cart")
+    val colorScheme  = MaterialTheme.colorScheme
+    var selectedTab  by remember { mutableIntStateOf(0) }
+    var profile      by remember { mutableStateOf(UserProfile()) }
+    var showEditSheet by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-        Column(modifier = Modifier.fillMaxWidth().background(colorScheme.background)
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+
+        // ── Avatar header ──────────────────────────────────────────────
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .background(colorScheme.background)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box {
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Avatar — tap to edit profile
+            Box(
+                modifier = Modifier.clickable { showEditSheet = true },
+                contentAlignment = Alignment.BottomEnd
+            ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data("https://i.pravatar.cc/150?img=10").build(),
-                    contentDescription = "Avatar", contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(80.dp).clip(CircleShape)
+                        .data(profile.avatar).build(),
+                    contentDescription = "Avatar",
+                    contentScale       = ContentScale.Crop,
+                    modifier           = Modifier.size(88.dp).clip(CircleShape)
                         .background(FamColors.SurfaceVariant)
                 )
-                Box(modifier = Modifier.size(24.dp).clip(CircleShape)
-                    .background(FamColors.PinterestRed)
-                    .align(Alignment.BottomEnd).clickable {},
-                    contentAlignment = Alignment.Center) {
-                    Text("✎", fontSize = 12.sp, color = Color.White)
+                // Camera badge
+                Box(
+                    modifier = Modifier.size(28.dp).clip(CircleShape)
+                        .background(FamColors.PinterestRed)
+                        .border(BorderStroke(2.dp, colorScheme.background), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("📷", fontSize = 12.sp)
                 }
             }
-            Text("Jane Client", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+
+            Text(profile.name, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 color = colorScheme.onBackground)
-            Text("jane@example.com", fontSize = 13.sp,
+            Text(profile.email, fontSize = 13.sp,
                 color = colorScheme.onBackground.copy(0.55f))
-            OutlinedButton(onClick = { navController.navigate(Screen.EditProfile.route) },
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant)) {
-                Text("Edit Profile", fontSize = 13.sp, color = colorScheme.onBackground)
-            }
         }
 
-        TabRow(selectedTabIndex = selectedTab,
-            containerColor = colorScheme.background,
-            contentColor   = FamColors.PinterestRed,
-            indicator = { tabPositions ->
+        // ── Tabs ───────────────────────────────────────────────────────
+        val tabs = listOf("Profile", "Orders", "Cart")
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor   = colorScheme.background,
+            contentColor     = FamColors.PinterestRed,
+            indicator        = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     color    = FamColors.PinterestRed)
-            }) {
+            }
+        ) {
             tabs.forEachIndexed { i, title ->
                 Tab(selected = selectedTab == i, onClick = { selectedTab = i },
                     text = {
                         Text(title, fontSize = 14.sp,
-                            fontWeight = if (selectedTab == i) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (selectedTab == i) FontWeight.Bold
+                            else FontWeight.Normal,
                             color = if (selectedTab == i) FamColors.PinterestRed
                             else colorScheme.onBackground.copy(0.5f))
                     })
@@ -85,47 +114,180 @@ fun ProfileScreen(navController: NavHostController) {
         }
 
         when (selectedTab) {
-            0 -> ProfileTab(colorScheme)
-            1 -> ProfileOrdersTab(colorScheme)
-            2 -> ProfileCartTab(navController, colorScheme)
+            0 -> ProfileTab(profile, colorScheme, onEdit = { showEditSheet = true })
+            1 -> OrdersTab(colorScheme)
+            2 -> CartTab(navController, colorScheme)
+        }
+    }
+
+    // ── Edit Profile Sheet ─────────────────────────────────────────────
+    if (showEditSheet) {
+        EditProfileSheet(
+            profile   = profile,
+            onDismiss = { showEditSheet = false },
+            onSave    = { updated -> profile = updated; showEditSheet = false }
+        )
+    }
+}
+
+// ── Edit Profile Bottom Sheet ─────────────────────────────────────────────────
+@Composable
+private fun EditProfileSheet(
+    profile:   UserProfile,
+    onDismiss: () -> Unit,
+    onSave:    (UserProfile) -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    var name     by remember { mutableStateOf(profile.name) }
+    var phone    by remember { mutableStateOf(profile.phone) }
+    var location by remember { mutableStateOf(profile.location) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties       = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Dim background
+            Box(modifier = Modifier.fillMaxSize()
+                .background(Color.Black.copy(0.5f))
+                .clickable { onDismiss() })
+
+            // Sheet
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(colorScheme.background)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Handle
+                Box(modifier = Modifier.width(40.dp).height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(colorScheme.outlineVariant)
+                    .align(Alignment.CenterHorizontally))
+
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Edit Profile", fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold, color = colorScheme.onBackground)
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colorScheme.onBackground.copy(0.5f))
+                    }
+                }
+
+                // Change avatar
+                Box(modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .clickable { /* TODO: image picker */ },
+                    contentAlignment = Alignment.BottomEnd) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalPlatformContext.current)
+                            .data(profile.avatar).build(),
+                        contentDescription = null,
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.size(80.dp).clip(CircleShape)
+                            .background(FamColors.SurfaceVariant)
+                    )
+                    Box(modifier = Modifier.size(26.dp).clip(CircleShape)
+                        .background(FamColors.PinterestRed)
+                        .border(BorderStroke(2.dp, colorScheme.background), CircleShape),
+                        contentAlignment = Alignment.Center) {
+                        Text("📷", fontSize = 11.sp)
+                    }
+                }
+                Text("Tap photo to change", fontSize = 11.sp,
+                    color = colorScheme.onBackground.copy(0.4f),
+                    modifier = Modifier.align(Alignment.CenterHorizontally))
+
+                // Fields
+                EditField("Full Name", name, { name = it }, colorScheme)
+                EditField("Phone", phone, { phone = it }, colorScheme)
+                EditField("Location", location, { location = it }, colorScheme)
+
+                // Save
+                Button(
+                    onClick  = { onSave(profile.copy(name = name, phone = phone, location = location)) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = FamColors.PinterestRed)
+                ) { Text("Save Changes", fontWeight = FontWeight.Bold, color = Color.White) }
+
+                Spacer(Modifier.navigationBarsPadding())
+            }
         }
     }
 }
 
 @Composable
-private fun ProfileTab(colorScheme: ColorScheme) {
+private fun EditField(label: String, value: String, onValue: (String) -> Unit,
+                      colorScheme: ColorScheme) {
+    OutlinedTextField(
+        value         = value,
+        onValueChange = onValue,
+        label         = { Text(label) },
+        modifier      = Modifier.fillMaxWidth(),
+        shape         = RoundedCornerShape(12.dp),
+        singleLine    = true,
+        colors        = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = FamColors.PinterestRed,
+            focusedLabelColor  = FamColors.PinterestRed)
+    )
+}
+
+// ── Profile Tab ───────────────────────────────────────────────────────────────
+@Composable
+private fun ProfileTab(profile: UserProfile, colorScheme: ColorScheme, onEdit: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ProfileField("Full Name",    "Jane Client",       colorScheme)
-        ProfileField("Email",        "jane@example.com",  colorScheme)
-        ProfileField("Phone",        "+254 700 000 000",  colorScheme)
-        ProfileField("Location",     "Nairobi, Kenya",    colorScheme)
+
+        ProfileField("Full Name",    profile.name,     colorScheme)
+        ProfileField("Email",        profile.email,    colorScheme)
+        ProfileField("Phone",        profile.phone,    colorScheme)
+        ProfileField("Location",     profile.location, colorScheme)
         HorizontalDivider(color = colorScheme.outlineVariant)
         Text("Account", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
             color = colorScheme.onBackground)
-        ProfileField("Role",         "Client",            colorScheme)
-        ProfileField("Member Since", "March 2026",        colorScheme)
+        ProfileField("Role",         profile.role,  colorScheme)
+        ProfileField("Member Since", profile.since, colorScheme)
         HorizontalDivider(color = colorScheme.outlineVariant)
-        OutlinedButton(onClick = {},
+
+        // Edit Profile - now a subtle text button, not the main CTA
+        OutlinedButton(
+            onClick  = onEdit,
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape    = RoundedCornerShape(12.dp),
-            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error)) {
+            border   = BorderStroke(1.dp, colorScheme.outlineVariant)
+        ) {
+            Text("✎  Edit Profile", fontSize = 14.sp,
+                color = colorScheme.onBackground)
+        }
+
+        HorizontalDivider(color = colorScheme.outlineVariant)
+
+        // Sign out
+        OutlinedButton(
+            onClick  = { /* TODO: sign out → navigate to Login */ },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape    = RoundedCornerShape(12.dp),
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+        ) {
             Text("Sign Out", color = MaterialTheme.colorScheme.error, fontSize = 15.sp)
         }
     }
 }
 
-// Uses real CartState.orders — same data as Cart screen Orders tab
+// ── Orders Tab ────────────────────────────────────────────────────────────────
 @Composable
-private fun ProfileOrdersTab(colorScheme: ColorScheme) {
+private fun OrdersTab(colorScheme: ColorScheme) {
     val orders = CartState.orders
     if (orders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("🎨", fontSize = 40.sp)
-                Text("No orders yet", fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onBackground)
+                Text("No custom orders yet", fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
                 Text("Order a custom artwork from an artist",
                     fontSize = 13.sp, color = colorScheme.onBackground.copy(0.5f))
             }
@@ -138,8 +300,9 @@ private fun ProfileOrdersTab(colorScheme: ColorScheme) {
     }
 }
 
+// ── Cart Tab ──────────────────────────────────────────────────────────────────
 @Composable
-private fun ProfileCartTab(navController: NavHostController, colorScheme: ColorScheme) {
+private fun CartTab(navController: NavHostController, colorScheme: ColorScheme) {
     val items = CartState.items
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -170,12 +333,11 @@ private fun ProfileCartTab(navController: NavHostController, colorScheme: ColorS
                                 .background(FamColors.SurfaceVariant)
                         )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(item.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                color = colorScheme.onBackground)
+                            Text(item.title, fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold, color = colorScheme.onBackground)
                             Text(item.artistName, fontSize = 12.sp,
                                 color = colorScheme.onBackground.copy(0.6f))
                         }
-                        // ← Fix 3: use toString() instead of String.format
                         Text("KES ${item.price}", fontSize = 13.sp,
                             fontWeight = FontWeight.Bold, color = FamColors.PinterestRed)
                     }
